@@ -15,7 +15,7 @@ class Application():
         self.footer()
 
     def title(self):
-        st.title('A Data Helper App')
+        st.title('A Data Helper App (alpha)')
 
     def body(self):
         st.markdown("<h3 style='text-align: center; color: black;font-family:courier;'> upload a csv, get an optimized pandas pickle </h3>", unsafe_allow_html=True)
