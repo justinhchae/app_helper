@@ -77,6 +77,7 @@ class DataLoader():
         def _reduce_precision(x):
             col_type = x.dtype
             unique_data = list(x.unique())
+            bools = [True, False, 'true', 'True', 'False', 'false']
             n_unique = float(len(unique_data))
             n_records = float(len(x))
             cat_ratio = n_unique / n_records
@@ -99,6 +100,8 @@ class DataLoader():
                 elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
                     x = x.astype(np.int64)
 
+                    # TODO: set precision to unsigned integers with nullable NA
+
             elif 'float' in str(col_type):
                 c_min = x.min()
                 c_max = x.max()
@@ -114,6 +117,10 @@ class DataLoader():
                     x = pd.to_datetime(x)
                 except:
                     pass
+
+            elif any(i in bools for i in unique_data):
+                x = x.astype('boolean')
+                #TODO: set precision to bool if boolean not needed
 
             elif cat_ratio < .1 or n_unique < 20:
                 x = x.astype('category')
