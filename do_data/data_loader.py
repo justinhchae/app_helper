@@ -175,16 +175,16 @@ class DataLoader():
         if self.upload_file is not None:
             self.edit_data()
 
-            if self.index_col:
-                index_col = 0
-            else:
-                index_col = self.index_col
+            # if self.index_col:
+            #     index_col = 0
+            # else:
+            #     index_col = self.index_col
 
-                with st.spinner('Reading and Parsing DataFrame Columns'):
-                    self.df = pd.read_csv(self.upload_file, index_col=index_col)
-                    self.df.columns = self.parse_cols(self.df)
+            with st.spinner('Reading and Parsing DataFrame Columns'):
+                self.df = pd.read_csv(self.upload_file)
+                self.df.columns = self.parse_cols(self.df)
 
-                st.success('Ready! Parsed DataFrame Columns to lower case with underscores _.')
+            st.success('Ready! Parsed DataFrame Columns to lower case with underscores _.')
 
             if self.select_col:
                 self.select_cols()
