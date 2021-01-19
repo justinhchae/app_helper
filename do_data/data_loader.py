@@ -35,7 +35,8 @@ class DataLoader():
                         pass
 
             with col2:
-                self.index_col = st.checkbox('Set Index Column = 0', value=False, key='1')
+                # self.index_col = st.checkbox('Set Index Column = 0', value=False, key='1')
+                pass
             with col3:
                 self.select_col = st.checkbox('Select Specific Columns', value=False, key='2')
 
