@@ -23,8 +23,12 @@ class Application():
 
     def footer(self):
         st.markdown(
-            "<i>&copy All Rights Reserved [@justinhchae](https://twitter.com/justinhchae?lang=en)</i>",
+            '<i style="font-size:11px">&copy All Rights Reserved [@justinhchae](https://twitter.com/justinhchae?lang=en)</i>',
             unsafe_allow_html=True)
+        st.markdown(
+            '<p style="font-size:11px">The information provided by this app (the “Site”) is for general informational purposes only. All information on the Site is provided in good faith, however we make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability or completeness of any information on the Site.</p>',
+            unsafe_allow_html=True
+        )
 
 
 
