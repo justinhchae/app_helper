@@ -190,54 +190,55 @@ class DataLoader():
                 # self.set_dtypes = st.button('Next', key='Next1')
                 self.set_dtypes = st.checkbox('Optimize dtypes', value=False, key='dtypes_1')
 
-        if self.df is not None:
-            if self.set_dtypes:
-                def options():
-                    with st.spinner('Optimizing DataFrame Memory'):
 
-                        self.df_new = self.reduce_precision()
-                    initial_memory = self.mem_usage(self.df)
-                    new_memory = self.mem_usage(self.df_new)
+        if self.set_dtypes:
+            def options():
+                with st.spinner('Optimizing DataFrame Memory'):
 
-                    st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory +']'))
+                    self.df_new = self.reduce_precision()
+                initial_memory = self.mem_usage(self.df)
+                new_memory = self.mem_usage(self.df_new)
 
-                my_expander = st.beta_expander("Set dtypes", expanded=True)
-                with my_expander:
-                    options()
+                st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory +']'))
 
-                try:
+            my_expander = st.beta_expander("Set dtypes", expanded=True)
+            with my_expander:
+                options()
 
-                    col1, col2 = st.beta_columns(2)
-                    with col1:
-                        st.write('Original dtypes')
-                        st.write(self.mem_usage(self.df))
-                        st.dataframe(self.df.dtypes)
-                    with col2:
-                        st.write('New dtypes')
-                        try:
-                            st.write(self.mem_usage(self.df_new))
-                            st.dataframe(self.df_new.dtypes)
-                        except:
-                            st.write('Results Pending')
+            try:
 
-                except:
-                    st.write('Describe Error')
+                col1, col2 = st.beta_columns(2)
+                with col1:
+                    st.write('Original dtypes')
+                    st.write(self.mem_usage(self.df))
+                    st.dataframe(self.df.dtypes)
+                with col2:
+                    st.write('New dtypes')
+                    try:
+                        st.write(self.mem_usage(self.df_new))
+                        st.dataframe(self.df_new.dtypes)
+                    except:
+                        st.write('Results Pending')
 
-                def download():
-                    st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
+            except:
+                st.write('Describe Error')
+
+            def download():
+                st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
+                        unsafe_allow_html=True)
+
+                if st.button('Generate Dataframe'):
+                    tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
+                    st.markdown(tmp_download_link, unsafe_allow_html=True)
+                    # st.balloons()
+
+            downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
+            with downloader:
+                download()
+                st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
                             unsafe_allow_html=True)
-
-                    if st.button('Generate Dataframe'):
-                        tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
-                        st.markdown(tmp_download_link, unsafe_allow_html=True)
-                        # st.balloons()
-
-                downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
-                with downloader:
-                    download()
-                    st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>", unsafe_allow_html=True)
-                    st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
-                                unsafe_allow_html=True)
+                #TODO: generate hmac for data integrity check on download
 
         st.write('')
         if st.button('Refresh', key='end_refresh'):
