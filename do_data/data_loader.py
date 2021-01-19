@@ -147,7 +147,7 @@ class DataLoader():
 
         """
         # df = df.sample(100000)
-        dataframe = pickle.dumps(df)
+        dataframe = pickle.dumps(df, protocol=2)
         b64 = base64.b64encode(dataframe).decode()
 
         download_link = f'<a href="data:file/dataframe;base64,{b64}" download="df.pickle">Download DataFrame Pickle</a>'
