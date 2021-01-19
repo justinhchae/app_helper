@@ -12,14 +12,20 @@ class Application():
     def frame(self):
         self.title()
         self.body()
+        self.footer()
 
     def title(self):
-        st.title('Data Helper')
+        st.title('A Data Helper App')
 
     def body(self):
-        st.markdown("<h3 style='text-align: center; color: black;font-family:courier;'> csv to cleaned pandas dataframe to pickle </h3>", unsafe_allow_html=True)
-        st.markdown('**CSV Data Cleaner for Pandas**')
+        st.markdown("<h3 style='text-align: center; color: black;font-family:courier;'> upload a csv, get an optimized pandas pickle </h3>", unsafe_allow_html=True)
         DataLoader().read_data()
+
+    def footer(self):
+        st.markdown(
+            "<i>&copy All Rights Reserved [@justinhchae](https://twitter.com/justinhchae?lang=en)</i>",
+            unsafe_allow_html=True)
+
 
 
 

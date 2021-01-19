@@ -26,7 +26,14 @@ class DataLoader():
         def options():
             col1, col2, col3 = st.beta_columns(3)
             with col1:
-                self.refresh = st.button('Refresh')
+                if st.button('Refresh'):
+                    try:
+                        del self.df
+                        del self.df_new
+                        gc.collect()
+                    except:
+                        pass
+
             with col2:
                 self.index_col = st.checkbox('Set Index Column = 0', value=False, key='1')
             with col3:
@@ -148,7 +155,7 @@ class DataLoader():
         return download_link
 
     def read_data(self):
-        label='Upload CSV File'
+        label='start here'
         type=['csv']
         accept_multiple_files=False
         key='dataloader1'
@@ -183,53 +190,64 @@ class DataLoader():
                 # self.set_dtypes = st.button('Next', key='Next1')
                 self.set_dtypes = st.checkbox('Optimize dtypes', value=False, key='dtypes_1')
 
+        if self.df is not None:
+            if self.set_dtypes:
+                def options():
+                    with st.spinner('Optimizing DataFrame Memory'):
 
-        if self.set_dtypes:
-            def options():
-                with st.spinner('Optimizing DataFrame Memory'):
+                        self.df_new = self.reduce_precision()
+                    initial_memory = self.mem_usage(self.df)
+                    new_memory = self.mem_usage(self.df_new)
 
-                    self.df_new = self.reduce_precision()
-                initial_memory = self.mem_usage(self.df)
-                new_memory = self.mem_usage(self.df_new)
+                    st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory +']'))
 
-                st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory +']'))
+                my_expander = st.beta_expander("Set dtypes", expanded=True)
+                with my_expander:
+                    options()
 
-            my_expander = st.beta_expander("Set dtypes", expanded=True)
-            with my_expander:
-                options()
+                try:
 
+                    col1, col2 = st.beta_columns(2)
+                    with col1:
+                        st.write('Original dtypes')
+                        st.write(self.mem_usage(self.df))
+                        st.dataframe(self.df.dtypes)
+                    with col2:
+                        st.write('New dtypes')
+                        try:
+                            st.write(self.mem_usage(self.df_new))
+                            st.dataframe(self.df_new.dtypes)
+                        except:
+                            st.write('Results Pending')
+
+                except:
+                    st.write('Describe Error')
+
+                def download():
+                    st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
+                            unsafe_allow_html=True)
+
+                    if st.button('Generate Dataframe'):
+                        tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
+                        st.markdown(tmp_download_link, unsafe_allow_html=True)
+                        # st.balloons()
+
+                downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
+                with downloader:
+                    download()
+                    st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
+                                unsafe_allow_html=True)
+
+        st.write('')
+        if st.button('Refresh', key='end_refresh'):
             try:
-
-                col1, col2 = st.beta_columns(2)
-                with col1:
-                    st.write('Original dtypes')
-                    st.write(self.mem_usage(self.df))
-                    st.dataframe(self.df.dtypes)
-                with col2:
-                    st.write('New dtypes')
-                    try:
-                        st.write(self.mem_usage(self.df_new))
-                        st.dataframe(self.df_new.dtypes)
-                    except:
-                        st.write('Results Pending')
-
+                del self.df
+                del self.df_new
+                gc.collect()
             except:
-                st.write('Describe Error')
+                pass
 
-
-            def download():
-                st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
-                        unsafe_allow_html=True)
-
-                if st.button('Download Dataframe'):
-                    tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
-                    st.markdown(tmp_download_link, unsafe_allow_html=True)
-                    # st.balloons()
-
-
-            downloader = st.beta_expander("Download Data", expanded=True)
-            with downloader:
-                download()
 
 
 
