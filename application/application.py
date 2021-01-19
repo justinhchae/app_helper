@@ -15,13 +15,17 @@ class Application():
         self.footer()
 
     def title(self):
-        st.title('A Data Helper App (alpha)')
+        st.title('A Data Helper App')
 
     def body(self):
         st.markdown("<h3 style='text-align: center; color: black;font-family:courier;'> upload a csv, get an optimized pandas pickle </h3>", unsafe_allow_html=True)
         DataLoader().read_data()
 
     def footer(self):
+        st.markdown(
+            '<i style="font-size:11px">alpha version 0</i>',
+            unsafe_allow_html=True)
+
         st.markdown(
             '<i style="font-size:11px">&copy All Rights Reserved [@justinhchae](https://twitter.com/justinhchae?lang=en)</i>',
             unsafe_allow_html=True)
