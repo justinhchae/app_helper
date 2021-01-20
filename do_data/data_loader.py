@@ -9,6 +9,7 @@ import gc
 import base64
 import io
 import pickle
+from textblob import TextBlob
 
 class DataLoader():
     def __init__(self):
@@ -65,7 +66,7 @@ class DataLoader():
         mem = df.memory_usage().sum() / 1024 ** 2
         return '{:.2f} MB'.format(mem)
     
-    def reduce_precision(self):
+    def reduce_precision(self, run_spellcheck=False):
         df = self.df.copy()
         cols_to_convert = []
         date_strings = ['_date', 'date_', 'date']
@@ -79,6 +80,7 @@ class DataLoader():
             col_type = x.dtype
             unique_data = list(x.unique())
             bools = [True, False, 'true', 'True', 'False', 'false']
+            #TODO: account for only T or only F or 1/0 situations
             n_unique = float(len(unique_data))
             n_records = float(len(x))
             cat_ratio = n_unique / n_records
@@ -124,7 +126,18 @@ class DataLoader():
                 #TODO: set precision to bool if boolean not needed
 
             elif cat_ratio < .1 or n_unique < 20:
-                x = x.astype('category')
+                try:
+                    #TODO: work on standardizing text data within narrow edit distance
+                    # x = x.fillna('Missing')
+                    x = x.str.title()
+                    # if run_spellcheck:
+                    #     correct_spellings = [str(TextBlob(i).correct()).title() for i in list(x.unique())]
+                    #     key = dict(zip(list(x.unique()), correct_spellings))
+                    #     x = np.where(isinstance(x, str), x.map(key), x)
+                except:
+                    pass
+
+                x = pd.Categorical(x)
 
             elif all(isinstance(i, str) for i in unique_data):
                 x = x.astype('string')
@@ -152,6 +165,7 @@ class DataLoader():
         Examples:
         download_link(YOUR_DF, 'YOUR_DF.csv', 'Click here to download data!')
         download_link(YOUR_STRING, 'YOUR_STRING.txt', 'Click here to download your text!')
+        ref: https://discuss.streamlit.io/t/how-to-download-a-trained-model/2976
 
         """
         # df = df.sample(100000)
@@ -204,8 +218,8 @@ class DataLoader():
                 with st.spinner('Optimizing DataFrame Memory'):
 
                     self.df_new = self.reduce_precision()
-                initial_memory = self.mem_usage(self.df)
-                new_memory = self.mem_usage(self.df_new)
+                    initial_memory = self.mem_usage(self.df)
+                    new_memory = self.mem_usage(self.df_new)
 
                 st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory +']'))
 
@@ -246,6 +260,7 @@ class DataLoader():
                 st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>", unsafe_allow_html=True)
                 st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
                             unsafe_allow_html=True)
+                # print(self.df_new['item_name'].head())
                 #TODO: generate hmac for data integrity check on download
 
         st.write('')
