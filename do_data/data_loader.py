@@ -236,7 +236,7 @@ class DataLoader():
                 try:
                     self.df_new = self.make_categories(self.df_new, self.standardize_values)
                 except:
-                    st.write('Sorry, there is a cache conflict, try refreshing cache and browser.')
+                    # st.write('Sorry, there is a cache conflict, try refreshing cache and browser.')
                     st.write('Skipped Standardizer, writing dataframe without standardized values.')
 
                 tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
@@ -320,69 +320,71 @@ class DataLoader():
                 if 'category' in str(type_id):
                     target_cols.append(col_name)
 
-            select_cols = st.selectbox('Standardize Columns', target_cols)
+            if target_cols:
 
-            col1, col2, col3 = st.beta_columns(3)
-            with col1:
-                st.write('Unique values in:', str(select_cols))
-                st.markdown(
-                    "<h4 style='text-align: center; color: black;font-family:courier;'> all unique values in the column </h4>",
-                    unsafe_allow_html=True)
-                st.write('')
-                categories = list(df[select_cols].dropna().astype('object').unique())
+                select_cols = st.selectbox('Standardize Columns', target_cols)
 
-                checkers = {}
-                for index, value in enumerate(categories):
-                    checker = st.checkbox(value, value=True, key=str('std_' + str(index)))
-                    checkers.update({value: checker})
+                col1, col2, col3 = st.beta_columns(3)
+                with col1:
+                    st.write('Unique values in:', str(select_cols))
+                    st.markdown(
+                        "<h4 style='text-align: center; color: black;font-family:courier;'> all unique values in the column </h4>",
+                        unsafe_allow_html=True)
+                    st.write('')
+                    categories = list(df[select_cols].dropna().astype('object').unique())
 
-            with col2:
-                st.write('Standardize:', str(select_cols))
-                st.markdown(
-                    "<h4 style='text-align: center; color: black;font-family:courier;'> enter new values -> click Save Changes </h4>",
-                    unsafe_allow_html=True)
+                    checkers = {}
+                    for index, value in enumerate(categories):
+                        checker = st.checkbox(value, value=True, key=str('std_' + str(index)))
+                        checkers.update({value: checker})
 
-                display_value = [key for key, value in checkers.items() if value is True]
-                self.changers = {}
+                with col2:
+                    st.write('Standardize:', str(select_cols))
+                    st.markdown(
+                        "<h4 style='text-align: center; color: black;font-family:courier;'> enter new values -> click Save Changes </h4>",
+                        unsafe_allow_html=True)
 
-                for index, value in enumerate(display_value):
-                    changer = st.text_input(value, value=value)
-                    self.changers.update({value: changer})
+                    display_value = [key for key, value in checkers.items() if value is True]
+                    self.changers = {}
 
-            with col3:
-                st.write('Actions:')
-                st.markdown(
-                    "<h4 style='text-align: center; color: black;font-family:courier;'> save, clear, view changes </h4>",
-                    unsafe_allow_html=True)
-                @st.cache(allow_output_mutation=True, persist=True)
-                def persist_dict():
-                    return []
+                    for index, value in enumerate(display_value):
+                        changer = st.text_input(value, value=value)
+                        self.changers.update({value: changer})
 
-                standardize_values = persist_dict()
+                with col3:
+                    st.write('Actions:')
+                    st.markdown(
+                        "<h4 style='text-align: center; color: black;font-family:courier;'> save, clear, view changes </h4>",
+                        unsafe_allow_html=True)
+                    @st.cache(allow_output_mutation=True, persist=True)
+                    def persist_dict():
+                        return []
 
-                if self.changers:
-                    if st.button('Save Changes'):
+                    standardize_values = persist_dict()
+
+                    if self.changers:
+                        if st.button('Save Changes'):
+                            try:
+                                #TODO: add session ID tag to df and changes to apply cashe per use
+                                standardize_values.append(tuple((str(select_cols), self.changers)))
+                                st.write('Added new values for', str(select_cols))
+
+                            except:
+                                st.write('commit error, refresh and try again')
+
+                    if st.button('Clear All Changes', key='clear_cache2'):
                         try:
-                            #TODO: add session ID tag to df and changes to apply cashe per use
-                            standardize_values.append(tuple((str(select_cols), self.changers)))
-                            st.write('Added new values for', str(select_cols))
-
+                            caching.clear_cache()
                         except:
-                            st.write('commit error, refresh and try again')
+                            pass
 
-                if st.button('Clear All Changes', key='clear_cache2'):
-                    try:
-                        caching.clear_cache()
-                    except:
-                        pass
+                    if st.button('View Current Changes', key='view_changes'):
+                        if standardize_values:
+                            st.write(standardize_values)
+                        else:
+                            st.write('No Changes Yet')
 
-                if st.button('View Current Changes', key='view_changes'):
-                    if standardize_values:
-                        st.write(standardize_values)
-                    else:
-                        st.write('No Changes Yet')
-
-        self.standardize_values = standardize_values
+                self.standardize_values = standardize_values
 
 
 
