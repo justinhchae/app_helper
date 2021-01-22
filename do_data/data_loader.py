@@ -253,7 +253,7 @@ class DataLoader():
 
 
     def read_data(self):
-        st.write(get_report_ctx().session_id)
+        # st.write(get_report_ctx().session_id)
         label='start here'
         type=['csv']
         accept_multiple_files=False
