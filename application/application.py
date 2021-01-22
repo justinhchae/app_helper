@@ -23,7 +23,7 @@ class Application():
 
     def footer(self):
         st.markdown(
-            '<i style="font-size:11px">alpha version 0</i>',
+            '<i style="font-size:11px">alpha version 0.1</i>',
             unsafe_allow_html=True)
 
         st.markdown(
