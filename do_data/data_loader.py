@@ -211,7 +211,7 @@ class DataLoader():
             st.write('Describe Error')
 
     def make_categories(self, df, value_map):
-
+        #TODO: synch session IDs across multiple concurrent users, avoid conflicts
         cols = []
         values = []
 
@@ -224,6 +224,7 @@ class DataLoader():
             df[col] = df[col].map(key, na_action='ignore')
 
         df[cols] = df[cols].apply(lambda x: pd.Categorical(x))
+
         return df
 
     def downloader(self):
@@ -232,7 +233,11 @@ class DataLoader():
                         unsafe_allow_html=True)
 
             if st.button('Generate Dataframe'):
-                self.df_new = self.make_categories(self.df_new, self.standardize_values)
+                try:
+                    self.df_new = self.make_categories(self.df_new, self.standardize_values)
+                except:
+                    st.write('Sorry, there is a cache conflict, try refreshing cache and browser.')
+                    st.write('Skipped Standardizer, writing dataframe without standardized values.')
 
                 tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
                 st.markdown(tmp_download_link, unsafe_allow_html=True)
@@ -253,7 +258,7 @@ class DataLoader():
 
 
     def read_data(self):
-        # st.write(get_report_ctx().session_id)
+        sesh_id = get_report_ctx().session_id
         label='start here'
         type=['csv']
         accept_multiple_files=False
@@ -298,13 +303,13 @@ class DataLoader():
                 if self.standardize:
                     st.markdown("<h3 style='text-align: center; color: black;'> Standardize Data </h3>",
                                 unsafe_allow_html=True)
-                    self.standardizer(self.df_new)
+                    self.standardizer(self.df_new, sesh_id)
 
             if self.standardize:
                 self.downloader()
 
 
-    def standardizer(self, df):
+    def standardizer(self, df, session_id):
 
         if df is not None:
             types = df.dtypes
@@ -330,7 +335,6 @@ class DataLoader():
                 for index, value in enumerate(categories):
                     checker = st.checkbox(value, value=True, key=str('std_' + str(index)))
                     checkers.update({value: checker})
-
 
             with col2:
                 st.write('Standardize:', str(select_cols))
@@ -359,6 +363,7 @@ class DataLoader():
                 if self.changers:
                     if st.button('Save Changes'):
                         try:
+                            #TODO: add session ID tag to df and changes to apply cashe per use
                             standardize_values.append(tuple((str(select_cols), self.changers)))
                             st.write('Added new values for', str(select_cols))
 
