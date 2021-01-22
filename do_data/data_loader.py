@@ -11,6 +11,9 @@ import io
 import pickle
 from textblob import TextBlob
 
+from streamlit.report_thread import get_report_ctx
+from streamlit import caching
+
 class DataLoader():
     def __init__(self):
         self.upload_file = None
@@ -21,17 +24,17 @@ class DataLoader():
         self.usecols = None
         self.set_dtypes = None
         self.refresh = None
+        self.standardize = None
+
 
     def edit_data(self):
 
         def options():
             col1, col2, col3 = st.beta_columns(3)
             with col1:
-                if st.button('Refresh'):
+                if st.button('Refresh', key='clear_cache1'):
                     try:
-                        del self.df
-                        del self.df_new
-                        gc.collect()
+                        caching.clear_cache()
                     except:
                         pass
 
@@ -176,7 +179,81 @@ class DataLoader():
         # st.markdown(download_link, unsafe_allow_html=True)
         return download_link
 
+    def optimizer(self):
+        def options():
+            with st.spinner('Optimizing DataFrame Memory'):
+                self.df_new = self.reduce_precision()
+                initial_memory = self.mem_usage(self.df)
+                new_memory = self.mem_usage(self.df_new)
+
+            st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory + ']'))
+
+        my_expander = st.beta_expander("Set dtypes", expanded=True)
+        with my_expander:
+            options()
+
+        try:
+
+            col1, col2 = st.beta_columns(2)
+            with col1:
+                st.write('Original dtypes')
+                st.write(self.mem_usage(self.df))
+                st.dataframe(self.df.dtypes)
+            with col2:
+                st.write('New dtypes')
+                try:
+                    st.write(self.mem_usage(self.df_new))
+                    st.dataframe(self.df_new.dtypes)
+                except:
+                    st.write('Results Pending')
+
+        except:
+            st.write('Describe Error')
+
+    def make_categories(self, df, value_map):
+
+        cols = []
+        values = []
+
+        for col, _ in value_map:
+            cols.append(col)
+
+        df[cols] = df[cols].apply(lambda x: x.astype('object'))
+
+        for col, key in value_map:
+            df[col] = df[col].map(key, na_action='ignore')
+
+        df[cols] = df[cols].apply(lambda x: pd.Categorical(x))
+        return df
+
+    def downloader(self):
+        def download():
+            st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
+                        unsafe_allow_html=True)
+
+            if st.button('Generate Dataframe'):
+                self.df_new = self.make_categories(self.df_new, self.standardize_values)
+
+                tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
+                st.markdown(tmp_download_link, unsafe_allow_html=True)
+                st.balloons()
+                caching.clear_cache()
+
+
+        downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
+        with downloader:
+            download()
+            st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>",
+                        unsafe_allow_html=True)
+            st.markdown(
+                "<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
+                unsafe_allow_html=True)
+            # print(self.df_new['item_name'].head())
+            # TODO: generate hmac for data integrity check on download
+
+
     def read_data(self):
+        st.write(get_report_ctx().session_id)
         label='start here'
         type=['csv']
         accept_multiple_files=False
@@ -208,69 +285,108 @@ class DataLoader():
             st.write(self.df.head())
 
             if self.df is not None:
-                st.markdown("<h3 style='text-align: center; color: black;'> Next -> Optimize dtypes </h3>", unsafe_allow_html=True)
-                # self.set_dtypes = st.button('Next', key='Next1')
-                self.set_dtypes = st.checkbox('Optimize dtypes', value=False, key='dtypes_1')
-
-
-        if self.set_dtypes:
-            def options():
-                with st.spinner('Optimizing DataFrame Memory'):
-
-                    self.df_new = self.reduce_precision()
-                    initial_memory = self.mem_usage(self.df)
-                    new_memory = self.mem_usage(self.df_new)
-
-                st.success(str('Reduced memory from [' + initial_memory + '] to [' + new_memory +']'))
-
-            my_expander = st.beta_expander("Set dtypes", expanded=True)
-            with my_expander:
-                options()
-
-            try:
-
-                col1, col2 = st.beta_columns(2)
-                with col1:
-                    st.write('Original dtypes')
-                    st.write(self.mem_usage(self.df))
-                    st.dataframe(self.df.dtypes)
-                with col2:
-                    st.write('New dtypes')
-                    try:
-                        st.write(self.mem_usage(self.df_new))
-                        st.dataframe(self.df_new.dtypes)
-                    except:
-                        st.write('Results Pending')
-
-            except:
-                st.write('Describe Error')
-
-            def download():
-                st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
-                        unsafe_allow_html=True)
-
-                if st.button('Generate Dataframe'):
-                    tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
-                    st.markdown(tmp_download_link, unsafe_allow_html=True)
-                    # st.balloons()
-
-            downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
-            with downloader:
-                download()
-                st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>", unsafe_allow_html=True)
-                st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
+                st.markdown("<h3 style='text-align: center; color: black;'> Optimize dtypes </h3>",
                             unsafe_allow_html=True)
-                # print(self.df_new['item_name'].head())
-                #TODO: generate hmac for data integrity check on download
 
-        st.write('')
-        if st.button('Refresh', key='end_refresh'):
-            try:
-                del self.df
-                del self.df_new
-                gc.collect()
-            except:
-                pass
+                self.set_dtypes = st.checkbox('Optimize dtypes', value=False, key='dtypes_1')
+                if self.set_dtypes:
+                    self.optimizer()
+
+            if self.set_dtypes and self.df_new is not None:
+                self.standardize = st.checkbox('Standardize Data', value=False, key='standardize_1')
+
+                if self.standardize:
+                    st.markdown("<h3 style='text-align: center; color: black;'> Standardize Data </h3>",
+                                unsafe_allow_html=True)
+                    self.standardizer(self.df_new)
+
+            if self.standardize:
+                self.downloader()
+
+
+    def standardizer(self, df):
+
+        if df is not None:
+            types = df.dtypes
+            test = list(zip(types, types.index))
+
+            target_cols = []
+            for type_id, col_name in test:
+                if 'category' in str(type_id):
+                    target_cols.append(col_name)
+
+            select_cols = st.selectbox('Standardize Columns', target_cols)
+
+            col1, col2, col3 = st.beta_columns(3)
+            with col1:
+                st.write('Unique values in:', str(select_cols))
+                st.markdown(
+                    "<h4 style='text-align: center; color: black;font-family:courier;'> all unique values in the column </h4>",
+                    unsafe_allow_html=True)
+                st.write('')
+                categories = list(df[select_cols].dropna().astype('object').unique())
+
+                checkers = {}
+                for index, value in enumerate(categories):
+                    checker = st.checkbox(value, value=True, key=str('std_' + str(index)))
+                    checkers.update({value: checker})
+
+
+            with col2:
+                st.write('Standardize:', str(select_cols))
+                st.markdown(
+                    "<h4 style='text-align: center; color: black;font-family:courier;'> enter new values -> click Save Changes </h4>",
+                    unsafe_allow_html=True)
+
+                display_value = [key for key, value in checkers.items() if value is True]
+                self.changers = {}
+
+                for index, value in enumerate(display_value):
+                    changer = st.text_input(value, value=value)
+                    self.changers.update({value: changer})
+
+            with col3:
+                st.write('Actions:')
+                st.markdown(
+                    "<h4 style='text-align: center; color: black;font-family:courier;'> save, clear, view changes </h4>",
+                    unsafe_allow_html=True)
+                @st.cache(allow_output_mutation=True, persist=True)
+                def persist_dict():
+                    return []
+
+                standardize_values = persist_dict()
+
+                if self.changers:
+                    if st.button('Save Changes'):
+                        try:
+                            standardize_values.append(tuple((str(select_cols), self.changers)))
+                            st.write('Added new values for', str(select_cols))
+
+                        except:
+                            st.write('commit error, refresh and try again')
+
+                if st.button('Clear All Changes', key='clear_cache2'):
+                    try:
+                        caching.clear_cache()
+                    except:
+                        pass
+
+                if st.button('View Current Changes', key='view_changes'):
+                    if standardize_values:
+                        st.write(standardize_values)
+                    else:
+                        st.write('No Changes Yet')
+
+        self.standardize_values = standardize_values
+
+
+
+
+
+
+
+
+
 
 
 
