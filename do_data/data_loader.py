@@ -386,7 +386,8 @@ class DataLoader():
 
                 self.standardize_values = standardize_values
 
-
+            else:
+                st.write('No columns to standardize, skip to next section.')
 
 
 
