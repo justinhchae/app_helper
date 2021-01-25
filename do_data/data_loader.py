@@ -11,6 +11,8 @@ import io
 import pickle
 from textblob import TextBlob
 
+from collections import defaultdict
+
 from streamlit.report_thread import get_report_ctx
 from streamlit import caching
 
@@ -26,6 +28,58 @@ class DataLoader():
         self.refresh = None
         self.standardize = None
 
+        # https://stackoverflow.com/questions/26367812/appending-to-list-in-python-dictionary
+
+    def read_data(self):
+        sesh_id = get_report_ctx().session_id
+        label='start here'
+        type=['csv']
+        accept_multiple_files=False
+        key='dataloader1'
+
+        self.upload_file = st.file_uploader(label=label
+                                       , type=type
+                                       , accept_multiple_files=accept_multiple_files
+                                       , key=key)
+
+        if self.upload_file is not None:
+            self.edit_data()
+
+            # if self.index_col:
+            #     index_col = 0
+            # else:
+            #     index_col = self.index_col
+
+            with st.spinner('Reading and Parsing DataFrame Columns'):
+                self.df = pd.read_csv(self.upload_file)
+                self.df.columns = self.parse_cols(self.df)
+
+            st.success('Ready! Parsed DataFrame Columns to lower case with underscores _.')
+
+            if self.select_col:
+                self.select_cols()
+
+            st.markdown("<h3 style='text-align: center; color: black;'> File Preview </h3>", unsafe_allow_html=True)
+            st.write(self.df.head())
+
+            if self.df is not None:
+                st.markdown("<h3 style='text-align: center; color: black;'> Optimize dtypes </h3>",
+                            unsafe_allow_html=True)
+
+                self.set_dtypes = st.checkbox('Optimize dtypes', value=False, key='dtypes_1')
+                if self.set_dtypes:
+                    self.optimizer()
+
+            if self.set_dtypes and self.df_new is not None:
+                self.standardize = st.checkbox('Standardize Data', value=False, key='standardize_1')
+
+                if self.standardize:
+                    st.markdown("<h3 style='text-align: center; color: black;'> Standardize Data </h3>",
+                                unsafe_allow_html=True)
+                    self.standardizer(self.df_new)
+
+            if self.standardize:
+                self.downloader()
 
     def edit_data(self):
 
@@ -34,7 +88,9 @@ class DataLoader():
             with col1:
                 if st.button('Refresh', key='clear_cache1'):
                     try:
-                        caching.clear_cache()
+                        if self.df is not None:
+                            del self.df
+                        # st.write('Refresh Session ID', get_report_ctx().session_id)
                     except:
                         pass
 
@@ -157,27 +213,7 @@ class DataLoader():
         df.columns = df.columns.str.replace('-', '_')
         return df.columns
 
-    def download_link(self, df, download_filename, download_link_text):
-        """
-        Generates a link to download the given object_to_download.
 
-        object_to_download (str, pd.DataFrame):  The object to be downloaded.
-        download_filename (str): filename and extension of file. e.g. mydata.csv, some_txt_output.txt
-        download_link_text (str): Text to display for download link.
-
-        Examples:
-        download_link(YOUR_DF, 'YOUR_DF.csv', 'Click here to download data!')
-        download_link(YOUR_STRING, 'YOUR_STRING.txt', 'Click here to download your text!')
-        ref: https://discuss.streamlit.io/t/how-to-download-a-trained-model/2976
-
-        """
-        # df = df.sample(100000)
-        dataframe = pickle.dumps(df, protocol=2)
-        b64 = base64.b64encode(dataframe).decode()
-
-        download_link = f'<a href="data:file/dataframe;base64,{b64}" download="df.pickle">Download DataFrame Pickle</a>'
-        # st.markdown(download_link, unsafe_allow_html=True)
-        return download_link
 
     def optimizer(self):
         def options():
@@ -210,106 +246,7 @@ class DataLoader():
         except:
             st.write('Describe Error')
 
-    def make_categories(self, df, value_map):
-        #TODO: synch session IDs across multiple concurrent users, avoid conflicts
-        cols = []
-        values = []
-
-        for col, _ in value_map:
-            cols.append(col)
-
-        df[cols] = df[cols].apply(lambda x: x.astype('object'))
-
-        for col, key in value_map:
-            df[col] = df[col].map(key, na_action='ignore')
-
-        df[cols] = df[cols].apply(lambda x: pd.Categorical(x))
-
-        return df
-
-    def downloader(self):
-        def download():
-            st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
-                        unsafe_allow_html=True)
-
-            if st.button('Generate Dataframe'):
-                try:
-                    self.df_new = self.make_categories(self.df_new, self.standardize_values)
-                except:
-                    # st.write('Sorry, there is a cache conflict, try refreshing cache and browser.')
-                    st.write('Skipped Standardizer, writing dataframe without standardized values.')
-
-                tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
-                st.markdown(tmp_download_link, unsafe_allow_html=True)
-                st.balloons()
-                caching.clear_cache()
-
-
-        downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
-        with downloader:
-            download()
-            st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>",
-                        unsafe_allow_html=True)
-            st.markdown(
-                "<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
-                unsafe_allow_html=True)
-            # print(self.df_new['item_name'].head())
-            # TODO: generate hmac for data integrity check on download
-
-
-    def read_data(self):
-        sesh_id = get_report_ctx().session_id
-        label='start here'
-        type=['csv']
-        accept_multiple_files=False
-        key='dataloader1'
-
-        self.upload_file = st.file_uploader(label=label
-                                       , type=type
-                                       , accept_multiple_files=accept_multiple_files
-                                       , key=key)
-
-        if self.upload_file is not None:
-            self.edit_data()
-
-            # if self.index_col:
-            #     index_col = 0
-            # else:
-            #     index_col = self.index_col
-
-            with st.spinner('Reading and Parsing DataFrame Columns'):
-                self.df = pd.read_csv(self.upload_file)
-                self.df.columns = self.parse_cols(self.df)
-
-            st.success('Ready! Parsed DataFrame Columns to lower case with underscores _.')
-
-            if self.select_col:
-                self.select_cols()
-
-            st.markdown("<h3 style='text-align: center; color: black;'> File Preview </h3>", unsafe_allow_html=True)
-            st.write(self.df.head())
-
-            if self.df is not None:
-                st.markdown("<h3 style='text-align: center; color: black;'> Optimize dtypes </h3>",
-                            unsafe_allow_html=True)
-
-                self.set_dtypes = st.checkbox('Optimize dtypes', value=False, key='dtypes_1')
-                if self.set_dtypes:
-                    self.optimizer()
-
-            if self.set_dtypes and self.df_new is not None:
-                self.standardize = st.checkbox('Standardize Data', value=False, key='standardize_1')
-
-                if self.standardize:
-                    st.markdown("<h3 style='text-align: center; color: black;'> Standardize Data </h3>",
-                                unsafe_allow_html=True)
-                    self.standardizer(self.df_new, sesh_id)
-
-            if self.standardize:
-                self.downloader()
-
-
-    def standardizer(self, df, session_id):
+    def standardizer(self, df):
 
         if df is not None:
             types = df.dtypes
@@ -356,17 +293,37 @@ class DataLoader():
                     st.markdown(
                         "<h4 style='text-align: center; color: black;font-family:courier;'> save, clear, view changes </h4>",
                         unsafe_allow_html=True)
+
                     @st.cache(allow_output_mutation=True, persist=True)
-                    def persist_dict():
+                    def persist_list():
                         return []
 
-                    standardize_values = persist_dict()
+                    standardize_values = persist_list()
+
+                    @st.cache(allow_output_mutation=True, persist=True)
+                    def persist_dict():
+                        return defaultdict(list)
+
+                    standardize_values_dict = persist_dict()
 
                     if self.changers:
                         if st.button('Save Changes'):
                             try:
                                 #TODO: add session ID tag to df and changes to apply cashe per use
-                                standardize_values.append(tuple((str(select_cols), self.changers)))
+                                records = tuple((str(select_cols), self.changers))
+
+                                curr_cols = [str(val[0]) for _, val in enumerate(standardize_values_dict[get_report_ctx().session_id])]
+
+                                if curr_cols and any(x == str(select_cols) for x in curr_cols):
+                                    st.write('Saved over previous values')
+                                # if any(str(val) in str(curr_cols) for idx, val in curr_cols):
+                                    new_list = [i for i in standardize_values_dict[get_report_ctx().session_id] if
+                                                i[0] != str(select_cols)]
+
+                                    standardize_values_dict[get_report_ctx().session_id] = new_list
+
+                                standardize_values_dict[get_report_ctx().session_id].append(records)
+
                                 st.write('Added new values for', str(select_cols))
 
                             except:
@@ -374,20 +331,96 @@ class DataLoader():
 
                     if st.button('Clear All Changes', key='clear_cache2'):
                         try:
-                            caching.clear_cache()
+                            standardize_values_dict.pop(get_report_ctx().session_id)
+                            st.write('Cleared Changes in Current Session')
                         except:
                             pass
 
                     if st.button('View Current Changes', key='view_changes'):
-                        if standardize_values:
-                            st.write(standardize_values)
+                        if standardize_values_dict:
+                            # st.write(standardize_values)
+                            st.write(standardize_values_dict[get_report_ctx().session_id])
                         else:
                             st.write('No Changes Yet')
 
-                self.standardize_values = standardize_values
+                # self.standardize_values = standardize_values
+                self.standardize_values = standardize_values_dict
 
             else:
                 st.write('No columns to standardize, skip to next section.')
+
+
+    def make_categories(self, df, value_map):
+        #TODO: synch session IDs across multiple concurrent users, avoid conflicts
+        cols = []
+        values = []
+
+        for col, _ in value_map:
+            cols.append(col)
+
+        df[cols] = df[cols].apply(lambda x: x.astype('object'))
+
+        for col, key in value_map:
+            df[col] = df[col].map(key, na_action='ignore')
+
+        df[cols] = df[cols].apply(lambda x: pd.Categorical(x))
+
+        return df
+
+    def downloader(self):
+        def download():
+            st.markdown("<h3 style='text-align: center; color: black;'> Download Data </h3>",
+                        unsafe_allow_html=True)
+
+            if st.button('Generate Dataframe'):
+                try:
+                    list_of_values = self.standardize_values[get_report_ctx().session_id]
+                    self.df_new = self.make_categories(self.df_new, list_of_values)
+                except:
+                    # st.write('Sorry, there is a cache conflict, try refreshing cache and browser.')
+                    st.write('Skipped Standardizer, writing dataframe without standardized values.')
+
+                tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
+                st.markdown(tmp_download_link, unsafe_allow_html=True)
+                st.balloons()
+                try:
+                    self.standardize_values.pop(get_report_ctx().session_id)
+                except:
+                    pass
+
+
+        downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
+        with downloader:
+            download()
+            st.markdown("<h4 style='text-align: center; color: black;font-family:menlo;'> usage after download: </h4>",
+                        unsafe_allow_html=True)
+            st.markdown(
+                "<h4 style='text-align: center; color: black;font-family:menlo;'> df = pd.read_pickle('df.pickle') </h4>",
+                unsafe_allow_html=True)
+            # print(self.df_new['item_name'].head())
+            # TODO: generate hmac for data integrity check on download
+
+    def download_link(self, df, download_filename, download_link_text):
+        """
+        Generates a link to download the given object_to_download.
+
+        object_to_download (str, pd.DataFrame):  The object to be downloaded.
+        download_filename (str): filename and extension of file. e.g. mydata.csv, some_txt_output.txt
+        download_link_text (str): Text to display for download link.
+
+        Examples:
+        download_link(YOUR_DF, 'YOUR_DF.csv', 'Click here to download data!')
+        download_link(YOUR_STRING, 'YOUR_STRING.txt', 'Click here to download your text!')
+        ref: https://discuss.streamlit.io/t/how-to-download-a-trained-model/2976
+
+        """
+        # df = df.sample(100000)
+        dataframe = pickle.dumps(df, protocol=2)
+        b64 = base64.b64encode(dataframe).decode()
+
+        download_link = f'<a href="data:file/dataframe;base64,{b64}" download="df.pickle">Download DataFrame Pickle</a>'
+        # st.markdown(download_link, unsafe_allow_html=True)
+        return download_link
 
 
 
