@@ -5,7 +5,8 @@
  
  docs and code in development
 
-22 Jan 2020:
+#### 24 Jan 2020:
+- added support for persisting standardized values across multiple concurrent users
+
+#### 22 Jan 2020:
 - added support for standardizing column values in categorical
-- ex: correct spellings of unique values manually
-- backlog: automated spell checker and feature suggestion
