@@ -295,7 +295,7 @@ class DataLoader():
                     def persist_list():
                         return []
 
-                    @st.cache(allow_output_mutation=True, persist=True)
+                    @st.cache(allow_output_mutation=True, persist=True, ttl=60*5)
                     def persist_dict():
                         return defaultdict(list)
 
@@ -304,7 +304,6 @@ class DataLoader():
                     if self.changers:
                         if st.button('Save Changes'):
                             try:
-                                #TODO: add session ID tag to df and changes to apply cashe per use
                                 records = tuple((str(select_cols), self.changers))
 
                                 curr_cols = [str(val[0]) for _, val in enumerate(standardize_values_dict[get_report_ctx().session_id])]
