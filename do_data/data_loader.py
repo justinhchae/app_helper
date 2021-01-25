@@ -31,7 +31,6 @@ class DataLoader():
         # https://stackoverflow.com/questions/26367812/appending-to-list-in-python-dictionary
 
     def read_data(self):
-        sesh_id = get_report_ctx().session_id
         label='start here'
         type=['csv']
         accept_multiple_files=False
@@ -44,7 +43,7 @@ class DataLoader():
 
         if self.upload_file is not None:
             self.edit_data()
-
+            #FIXME allow user to set index col 0
             # if self.index_col:
             #     index_col = 0
             # else:
@@ -213,8 +212,6 @@ class DataLoader():
         df.columns = df.columns.str.replace('-', '_')
         return df.columns
 
-
-
     def optimizer(self):
         def options():
             with st.spinner('Optimizing DataFrame Memory'):
@@ -244,7 +241,7 @@ class DataLoader():
                     st.write('Results Pending')
 
         except:
-            st.write('Describe Error')
+            st.write('Error Try Reloading the Page')
 
     def standardizer(self, df):
 
@@ -298,8 +295,6 @@ class DataLoader():
                     def persist_list():
                         return []
 
-                    standardize_values = persist_list()
-
                     @st.cache(allow_output_mutation=True, persist=True)
                     def persist_dict():
                         return defaultdict(list)
@@ -316,10 +311,8 @@ class DataLoader():
 
                                 if curr_cols and any(x == str(select_cols) for x in curr_cols):
                                     st.write('Saved over previous values')
-                                # if any(str(val) in str(curr_cols) for idx, val in curr_cols):
                                     new_list = [i for i in standardize_values_dict[get_report_ctx().session_id] if
                                                 i[0] != str(select_cols)]
-
                                     standardize_values_dict[get_report_ctx().session_id] = new_list
 
                                 standardize_values_dict[get_report_ctx().session_id].append(records)
@@ -338,12 +331,10 @@ class DataLoader():
 
                     if st.button('View Current Changes', key='view_changes'):
                         if standardize_values_dict:
-                            # st.write(standardize_values)
                             st.write(standardize_values_dict[get_report_ctx().session_id])
                         else:
                             st.write('No Changes Yet')
 
-                # self.standardize_values = standardize_values
                 self.standardize_values = standardize_values_dict
 
             else:
@@ -351,7 +342,6 @@ class DataLoader():
 
 
     def make_categories(self, df, value_map):
-        #TODO: synch session IDs across multiple concurrent users, avoid conflicts
         cols = []
         values = []
 
@@ -377,7 +367,6 @@ class DataLoader():
                     list_of_values = self.standardize_values[get_report_ctx().session_id]
                     self.df_new = self.make_categories(self.df_new, list_of_values)
                 except:
-                    # st.write('Sorry, there is a cache conflict, try refreshing cache and browser.')
                     st.write('Skipped Standardizer, writing dataframe without standardized values.')
 
                 tmp_download_link = self.download_link(self.df_new, 'dataframe', 'Click here to download your data!')
@@ -387,7 +376,6 @@ class DataLoader():
                     self.standardize_values.pop(get_report_ctx().session_id)
                 except:
                     pass
-
 
         downloader = st.beta_expander("Generate Pandas Pickle", expanded=True)
         with downloader:
